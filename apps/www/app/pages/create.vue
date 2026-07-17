@@ -2,6 +2,7 @@
 // ponytail: code client-side; state leeft in de socket.io session-key game:{id}.
 // Botsingskans 1/32^4 is verwaarloosbaar voor een feestspel — server-registry als het ooit knelt.
 function create() {
+  console.log('testz')
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
   const id = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
   void navigateTo(`/sessions/${id}`)
