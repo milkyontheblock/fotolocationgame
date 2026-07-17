@@ -1,29 +1,24 @@
 <script setup lang="ts">
-import SessionProviderClient from '~/components/SessionProvider.vue'
-
-const players = [
-  {
-    id: 'oergiojeiorggiojr',
-    username: 'milkyontheblock'
-  }
-] as const
-
 const route = useRoute()
+const id = computed(() => route.params.id as string)
 </script>
 
 <template>
-  <div class="min-h-screen flex">
-    <div class="flex-1" />
+  <SessionProvider :id="id">
+    <div class="h-screen flex p-6 gap-6">
+      <div class="flex-1 rounded-2xl overflow-hidden">
+        <div class="bg-linear-to-br from-blue-400 to-blue-500 size-full" />
+      </div>
 
-    <div class="w-150">
-      <ul class="p-8">
-        <li
-          v-for="player in players"
-          :key="player.id"
-        >
-          <PlayerCard :username="player.username" />
-        </li>
-      </ul>
+      <div class="w-150 flex flex-col gap-6">
+        <div class="rounded-2xl overflow-hidden">
+          <SessionStatusCard />
+        </div>
+
+        <div class="rounded-2xl overflow-hidden flex-1">
+          <SessionPlayerOverview />
+        </div>
+      </div>
     </div>
-  </div>
+  </SessionProvider>
 </template>
