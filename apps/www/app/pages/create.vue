@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// ponytail: code client-side; state leeft in de nuxt-realtime state-key game:{id}.
+// ponytail: code client-side; state leeft in de socket.io session-key game:{id}.
 // Botsingskans 1/32^4 is verwaarloosbaar voor een feestspel — server-registry als het ooit knelt.
 function create() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'

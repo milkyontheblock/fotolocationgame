@@ -1,6 +1,6 @@
 <template>
   <div>
     <PlayerRegisterModal />
-    <NuxtPage />
+    <!-- <NuxtPage /> -->
   </div>
 </template>
