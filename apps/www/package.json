@@ -15,7 +15,6 @@
     "@iconify-json/simple-icons": "^1.2.87",
     "@nuxt/ui": "^4.9.0",
     "@supabase/supabase-js": "^2.110.6",
-    "better-auth": "^1.6.23",
     "leaflet": "^1.9.4",
     "nuxt": "^4.4.8",
     "tailwindcss": "^4.3.1"

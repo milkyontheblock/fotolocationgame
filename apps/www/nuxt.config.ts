@@ -24,14 +24,6 @@ export default defineNuxtConfig({
 
   compatibilityDate: '2026-06-30',
 
-  vite: {
-    optimizeDeps: {
-      include: [
-        'better-auth/vue'
-      ]
-    }
-  },
-
   eslint: {
     config: {
       stylistic: {
