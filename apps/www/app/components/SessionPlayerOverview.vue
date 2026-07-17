@@ -1,97 +1,53 @@
 <script setup lang="ts">
-const players = [
-  {
-    id: 'oergiojeiorggiojr',
-    username: 'Jordan'
-  },
-  {
-    id: 'oergiojeiorggiojr',
-    username: 'Pascal'
-  },
-  {
-    id: 'oergiojeiorggiojr',
-    username: 'Daan G'
-  }
-]
+import { sessionKey } from './SessionProvider.vue'
+import { teams } from '~/data/teams'
 
-const teams = [
-  {
-    id: 'uih235uih23455uih',
-    name: 'Leeuw',
-    icon: 'game-icons:lion',
-    color: 'var(--color-blue-400)',
-    colorDark: 'var(--color-blue-600)'
-  },
-  {
-    id: '3roeriogjeiojrg',
-    name: 'Neushoorn',
-    icon: 'game-icons:lion',
-    color: 'var(--color-purple-400)',
-    colorDark: 'var(--color-purple-600)'
-  },
-  {
-    id: 'oinwerfgiojiou34t',
-    name: 'Olifant',
-    icon: 'game-icons:lion',
-    color: 'var(--color-orange-400)',
-    colorDark: 'var(--color-orange-600)'
-  },
-  {
-    id: 'ergvionergiojejriog',
-    name: 'Giraffe',
-    icon: 'game-icons:lion',
-    color: 'var(--color-green-400)',
-    colorDark: 'var(--color-green-600)'
-  },
-  {
-    id: 'zebra12345zebra67',
-    name: 'Zebra',
-    icon: 'game-icons:lion',
-    color: 'var(--color-yellow-400)',
-    colorDark: 'var(--color-yellow-600)'
-  },
-  {
-    id: 'hyena98765hyena12',
-    name: 'Hyena',
-    icon: 'game-icons:lion',
-    color: 'var(--color-rose-400)',
-    colorDark: 'var(--color-rose-600)'
-  },
-  {
-    id: 'luipaard5555luip3',
-    name: 'Luipaard',
-    icon: 'game-icons:lion',
-    color: 'var(--color-pink-400)',
-    colorDark: 'var(--color-pink-600)'
-  },
-  {
-    id: 'buffel77778buffel',
-    name: 'Buffel',
-    icon: 'game-icons:lion',
-    color: 'var(--color-amber-400)',
-    colorDark: 'var(--color-amber-600)'
-  },
-  {
-    id: 'krokodil99999kroko',
-    name: 'Krokodil',
-    icon: 'game-icons:lion',
-    color: 'var(--color-emerald-400)',
-    colorDark: 'var(--color-emerald-600)'
-  }
-]
+const session = inject(sessionKey)
+if (!session) {
+  throw new Error('SessionPlayerOverview must be used within a SessionProvider')
+}
+
+const { players, currentId, teamId, joinTeam } = session
+
+const unassigned = computed(() => players.value.filter(p => !p.teamId))
+
+function membersOf(id: string) {
+  return players.value.filter(p => p.teamId === id)
+}
 </script>
 
 <template>
   <ul class="p-6 bg-linear-to-br from-gray-200 to-gray-300 h-full flex flex-col gap-6 overflow-y-auto">
+    <li v-if="unassigned.length">
+      <UCard class="border-dashed">
+        <p class="text-sm text-gray-600">
+          Kies een team ({{ unassigned.length }} nog niet ingedeeld)
+        </p>
+
+        <div class="mt-3 flex flex-wrap gap-2">
+          <span
+            v-for="player in unassigned"
+            :key="player.id"
+            class="px-3 py-1 rounded-full border-2 border-gray-300 text-sm"
+            :class="{ 'font-semibold': player.id === currentId }"
+          >
+            {{ player.username }}
+          </span>
+        </div>
+      </UCard>
+    </li>
+
     <li
       v-for="team in teams"
       :key="team.id"
     >
       <UCard
         :style="{ backgroundColor: team.color, borderColor: team.colorDark }"
-        class="text-white"
+        class="text-white cursor-pointer transition-shadow"
+        :class="{ 'ring-4 ring-white/70': team.id === teamId }"
+        @click="joinTeam(team.id)"
       >
-        <div class="flex flex-row gap-4">
+        <div class="flex flex-row items-center gap-4">
           <UIcon
             :name="team.icon"
             class="size-8"
@@ -100,17 +56,28 @@ const teams = [
           <p class="text-lg font-semibold">
             {{ team.name }}
           </p>
+
+          <span
+            v-if="team.id === teamId"
+            class="ml-auto text-xs uppercase tracking-wide"
+          >
+            Jouw team
+          </span>
         </div>
 
         <div class="mt-4">
-          <ul class="grid grid-cols-2 gap-4">
+          <ul
+            v-if="membersOf(team.id).length"
+            class="grid grid-cols-2 gap-4"
+          >
             <li
-              v-for="player in players"
+              v-for="player in membersOf(team.id)"
               :key="player.id"
             >
               <div
-                class="flex items-center justify-center px-6 py-5 rounded-xl border-2"
+                class="flex items-center justify-center gap-2 px-6 py-5 rounded-xl border-2"
                 :style="{ borderColor: team.colorDark }"
+                :class="{ 'bg-white/20 font-semibold': player.id === currentId }"
               >
                 <UIcon
                   name="lucide:user"
@@ -121,6 +88,13 @@ const teams = [
               </div>
             </li>
           </ul>
+
+          <p
+            v-else
+            class="text-sm text-white/80"
+          >
+            Nog geen spelers
+          </p>
         </div>
       </UCard>
     </li>

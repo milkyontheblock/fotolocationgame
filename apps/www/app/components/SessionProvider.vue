@@ -1,4 +1,5 @@
 <script lang="ts">
+import { createClient, type RealtimeChannel } from '@supabase/supabase-js'
 import type { InjectionKey, Ref } from 'vue'
 
 export interface SessionPlayer {
@@ -18,8 +19,6 @@ export const sessionKey = Symbol('session') as InjectionKey<SessionContext>
 </script>
 
 <script setup lang="ts">
-import { createClient, type RealtimeChannel } from '@supabase/supabase-js'
-
 export interface SessionProviderProps {
   id: string
 }
@@ -37,7 +36,8 @@ function syncPlayers() {
   if (!channel) return
   const state = channel.presenceState<SessionPlayer>()
   players.value = Object.values(state)
-    .map(entries => entries[0])
+    // re-tracking (team switch) appends a new meta; the current one is last, not first
+    .map(entries => entries.at(-1))
     .filter((p): p is NonNullable<typeof p> => Boolean(p))
     .map(p => ({ id: p.id, username: p.username, teamId: p.teamId }))
 }
