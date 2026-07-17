@@ -1,20 +1,22 @@
-<script lang="ts">
-</script>
-
 <script setup lang="ts">
 import type { FormSubmitEvent } from '@nuxt/ui'
 
-interface UserForm { username?: string, id: string }
+interface UserForm { username: string, id: string }
 
 const player = usePlayer()
 const open = ref(false)
 
 const state = reactive<UserForm>({
-  id: crypto.randomUUID() })
+  username: '',
+  id: crypto.randomUUID()
+})
 
 function onSubmit(event: FormSubmitEvent<UserForm>) {
+  const username = event.data.username.trim()
+  if (!username) return
+
   player.id.value = event.data.id
-  player.username.value = event.data.username ?? ''
+  player.username.value = username
 
   open.value = false
 }
@@ -40,13 +42,17 @@ onMounted(() => {
           @submit="onSubmit"
         >
           <UFormField
-            label="Email"
-            name="email"
+            label="Naam"
+            name="username"
+            required
           >
             <UInput v-model="state.username" />
           </UFormField>
 
-          <UButton type="submit">
+          <UButton
+            type="submit"
+            :disabled="!state.username.trim()"
+          >
             Submit
           </UButton>
         </UForm>

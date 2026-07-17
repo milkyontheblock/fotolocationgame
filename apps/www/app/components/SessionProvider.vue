@@ -1,5 +1,4 @@
 <script lang="ts">
-import { createClient, type RealtimeChannel } from '@supabase/supabase-js'
 import type { InjectionKey, Ref } from 'vue'
 
 export interface SessionPlayer {
@@ -17,10 +16,13 @@ export interface SessionContext {
   start: () => void
 }
 
-// presence meta carries the game state so late joiners recover it on first sync.
-// updatedAt: Supabase appends a new meta on every re-track and never drops the
-// stale ones, so we tag each track and pick the freshest meta per key.
-type PresenceMeta = SessionPlayer & { started?: boolean, updatedAt?: number }
+// server-authoritative shared state, synced to every client on this session key.
+// nuxt-realtime holds one value per key (no presence meta list), so each client
+// just writes/removes its own entry keyed by player id.
+interface SessionState {
+  players: Record<string, SessionPlayer>
+  started: boolean
+}
 
 export const sessionKey = Symbol('session') as InjectionKey<SessionContext>
 </script>
@@ -31,82 +33,101 @@ export interface SessionProviderProps {
 }
 
 const props = defineProps<SessionProviderProps>()
-const runtimeConfig = useRuntimeConfig()
 const player = usePlayer()
 
-const supabase = createClient(runtimeConfig.public.supabaseUrl, runtimeConfig.public.supabaseKey)
+const state = useRealtimeState(`game:${props.id}`, { players: {}, started: false } as SessionState)
 
-const players = ref<SessionPlayer[]>([])
-const started = ref(false)
+const players = computed(() => Object.values(state.value.players))
+const started = computed(() => state.value.started)
+
 // this client's own intent to start — separates the host from late joiners for the redirect
 let hostStarted = false
-let firstSync = true
-let channel: RealtimeChannel | undefined
 
-function syncPlayers() {
-  if (!channel) return
-  const metas = Object.values(channel.presenceState<PresenceMeta>())
-    // a key holds every past track(); the freshest one is the current state
-    .map(entries => entries.reduce((a, b) => (b.updatedAt ?? 0) > (a.updatedAt ?? 0) ? b : a))
-    .filter((p): p is NonNullable<typeof p> => Boolean(p))
+// set while leaving the page so the self-heal watcher can't undo our own untrack
+let leaving = false
 
-  players.value = metas.map(p => ({ id: p.id, username: p.username, teamId: p.teamId }))
-  started.value = metas.some(p => p.started)
-
-  // a game session is either waiting for players or already in progress;
-  // landing on the URL after it started sends you back to the main menu
-  if (firstSync) {
-    firstSync = false
-    if (started.value && !hostStarted) navigateTo('/')
+function track() {
+  const id = player.id.value
+  // never write while loading: the module's storage:set is a full overwrite, so
+  // pushing our default state would wipe every other player (and the started flag)
+  if (leaving || state.loading.value || !id || !player.username.value) return
+  state.value = {
+    ...state.value,
+    players: {
+      ...state.value.players,
+      [id]: { id, username: player.username.value, teamId: player.teamId.value || undefined }
+    }
   }
 }
 
-function track() {
-  if (!channel || !player.id.value || !player.username.value) return
-  channel.track({
-    id: player.id.value,
-    username: player.username.value,
-    teamId: player.teamId.value || undefined,
-    started: hostStarted || undefined,
-    updatedAt: Date.now()
-  })
+function untrack() {
+  leaving = true
+  const id = player.id.value
+  if (!id || !state.value.players[id]) return
+  const rest = Object.fromEntries(Object.entries(state.value.players).filter(([key]) => key !== id))
+  state.value = { ...state.value, players: rest }
 }
 
 function start() {
   hostStarted = true
-  started.value = true
-  track()
+  state.value = { ...state.value, started: true }
 }
 
 function joinTeam(teamId: string) {
   player.teamId.value = teamId
-  // watcher below re-tracks presence with the new team
+  // watcher below re-tracks with the new team
 }
 
 onMounted(() => {
-  channel = supabase.channel(`game:${props.id}:players`, {
-    config: { presence: { key: player.id.value || crypto.randomUUID() } }
+  // first write waits for the server snapshot (loading), then re-runs when
+  // identity/team changes (e.g. after the register modal)
+  watch(
+    [state.loading, () => [player.id.value, player.username.value, player.teamId.value]],
+    track,
+    { immediate: true }
+  )
+
+  // self-heal lost updates: concurrent joins are last-write-wins on the server,
+  // so an incoming state may be missing us — re-add ourselves on top of it
+  watch(state, () => {
+    const id = player.id.value
+    if (id && !state.value.players[id]) track()
+  }, { deep: true })
+
+  // landing on an already-started game sends you back to the main menu. Decide once,
+  // on the first server snapshot, so a player already in the lobby isn't bounced
+  // when the host later starts.
+  let decided = false
+  watch(state.loading, (loading) => {
+    if (loading || decided) return
+    decided = true
+    if (state.value.started && !hostStarted) navigateTo('/')
   })
 
-  channel
-    .on('presence', { event: 'sync' }, syncPlayers)
-    .subscribe((status) => {
-      if (status === 'SUBSCRIBED') track()
-    })
-
-  // re-track once identity/team is known or changes (e.g. after the register modal)
-  watch(() => [player.id.value, player.username.value, player.teamId.value], track)
+  // best-effort prune on tab close; the socket usually flushes the frame before dying.
+  // pageshow restores us after a bfcache return (back button on mobile).
+  // ponytail: if the frame is lost, the stale player sits until the game ends — add
+  // server-side socket-disconnect pruning if it ever bites.
+  window.addEventListener('pagehide', untrack)
+  window.addEventListener('pageshow', retrack)
 })
 
+function retrack() {
+  leaving = false
+  track()
+}
+
 onUnmounted(() => {
-  if (channel) supabase.removeChannel(channel)
+  window.removeEventListener('pagehide', untrack)
+  window.removeEventListener('pageshow', retrack)
+  untrack()
 })
 
 provide(sessionKey, {
-  players: readonly(players) as Readonly<Ref<SessionPlayer[]>>,
+  players: players as Readonly<Ref<SessionPlayer[]>>,
   currentId: readonly(player.id) as Readonly<Ref<string | undefined>>,
   teamId: readonly(player.teamId) as Readonly<Ref<string | undefined>>,
-  started: readonly(started) as Readonly<Ref<boolean>>,
+  started: started as Readonly<Ref<boolean>>,
   joinTeam,
   start
 })

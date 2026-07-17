@@ -14,9 +14,9 @@
     "@iconify-json/lucide": "^1.2.114",
     "@iconify-json/simple-icons": "^1.2.87",
     "@nuxt/ui": "^4.9.0",
-    "@supabase/supabase-js": "^2.110.6",
     "leaflet": "^1.9.4",
     "nuxt": "^4.4.8",
+    "nuxt-realtime": "^0.1.2",
     "tailwindcss": "^4.3.1"
   },
   "devDependencies": {

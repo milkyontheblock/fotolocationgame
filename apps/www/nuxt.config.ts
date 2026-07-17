@@ -2,7 +2,8 @@
 export default defineNuxtConfig({
   modules: [
     '@nuxt/eslint',
-    '@nuxt/ui'
+    '@nuxt/ui',
+    'nuxt-realtime'
   ],
 
   devtools: {
@@ -11,15 +12,16 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
-  runtimeConfig: {
-    public: {
-      supabaseUrl: process.env.SUPABASE_URL,
-      supabaseKey: process.env.SUPABASE_KEY
-    }
-  },
-
   routeRules: {
     '/': { prerender: true }
+  },
+
+  // nuxt-realtime rides on Nitro's WebSocket support, which is off by default;
+  // without this the socket upgrade crashes the dev server (ECONNRESET restart loop)
+  nitro: {
+    experimental: {
+      websocket: true
+    }
   },
 
   compatibilityDate: '2026-06-30',

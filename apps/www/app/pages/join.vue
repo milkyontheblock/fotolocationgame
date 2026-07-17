@@ -1,5 +1,9 @@
 <script setup lang="ts">
-const value = ref([])
+const value = ref<string[]>([])
+
+function onComplete(code: string[]) {
+  void navigateTo(`/sessions/${code.join('').toUpperCase()}`)
+}
 </script>
 
 <template>
@@ -18,6 +22,7 @@ const value = ref([])
           v-model="value"
           size="xl"
           :length="4"
+          @complete="onComplete"
         />
       </div>
     </div>
