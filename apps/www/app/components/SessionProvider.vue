@@ -12,8 +12,13 @@ export interface SessionContext {
   players: Readonly<Ref<SessionPlayer[]>>
   currentId: Readonly<Ref<string | undefined>>
   teamId: Readonly<Ref<string | undefined>>
+  started: Readonly<Ref<boolean>>
   joinTeam: (teamId: string) => void
+  start: () => void
 }
+
+// presence meta carries the game state so late joiners recover it on first sync
+type PresenceMeta = SessionPlayer & { started?: boolean }
 
 export const sessionKey = Symbol('session') as InjectionKey<SessionContext>
 </script>
@@ -30,25 +35,46 @@ const player = usePlayer()
 const supabase = createClient(runtimeConfig.public.supabaseUrl, runtimeConfig.public.supabaseKey)
 
 const players = ref<SessionPlayer[]>([])
+const started = ref(false)
+// this client's own intent to start — separates the host from late joiners for the redirect
+let hostStarted = false
+let firstSync = true
 let channel: RealtimeChannel | undefined
 
 function syncPlayers() {
   if (!channel) return
-  const state = channel.presenceState<SessionPlayer>()
-  players.value = Object.values(state)
-    // re-tracking (team switch) appends a new meta; the current one is last, not first
-    .map(entries => entries.at(-1))
+  const metas = Object.values(channel.presenceState<PresenceMeta>())
+    // track() untracks first, so each key holds exactly one meta
+    .map(entries => entries[0])
     .filter((p): p is NonNullable<typeof p> => Boolean(p))
-    .map(p => ({ id: p.id, username: p.username, teamId: p.teamId }))
+
+  players.value = metas.map(p => ({ id: p.id, username: p.username, teamId: p.teamId }))
+  started.value = metas.some(p => p.started)
+
+  // a game session is either waiting for players or already in progress;
+  // landing on the URL after it started sends you back to the main menu
+  if (firstSync) {
+    firstSync = false
+    if (started.value && !hostStarted) navigateTo('/')
+  }
 }
 
-function track() {
+async function track() {
   if (!channel || !player.id.value || !player.username.value) return
-  channel.track({
+  // untrack first: re-tracking otherwise appends a new meta and the stale one lingers
+  await channel.untrack()
+  await channel.track({
     id: player.id.value,
     username: player.username.value,
-    teamId: player.teamId.value || undefined
+    teamId: player.teamId.value || undefined,
+    started: hostStarted || undefined
   })
+}
+
+function start() {
+  hostStarted = true
+  started.value = true
+  track()
 }
 
 function joinTeam(teamId: string) {
@@ -79,7 +105,9 @@ provide(sessionKey, {
   players: readonly(players) as Readonly<Ref<SessionPlayer[]>>,
   currentId: readonly(player.id) as Readonly<Ref<string | undefined>>,
   teamId: readonly(player.teamId) as Readonly<Ref<string | undefined>>,
-  joinTeam
+  started: readonly(started) as Readonly<Ref<boolean>>,
+  joinTeam,
+  start
 })
 </script>
 

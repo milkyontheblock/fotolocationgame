@@ -18,24 +18,30 @@ function membersOf(id: string) {
 
 <template>
   <ul class="p-6 bg-linear-to-br from-gray-200 to-gray-300 h-full flex flex-col gap-6 overflow-y-auto">
-    <li v-if="unassigned.length">
-      <UCard class="border-dashed">
-        <p class="text-sm text-gray-600">
-          Kies een team ({{ unassigned.length }} nog niet ingedeeld)
-        </p>
+    <Transition name="fade">
+      <li v-if="unassigned.length">
+        <UCard class="border-dashed">
+          <p class="text-sm text-gray-600">
+            Kies een team ({{ unassigned.length }} nog niet ingedeeld)
+          </p>
 
-        <div class="mt-3 flex flex-wrap gap-2">
-          <span
-            v-for="player in unassigned"
-            :key="player.id"
-            class="px-3 py-1 rounded-full border-2 border-gray-300 text-sm"
-            :class="{ 'font-semibold': player.id === currentId }"
+          <TransitionGroup
+            tag="div"
+            name="player"
+            class="relative mt-3 flex flex-wrap gap-2"
           >
-            {{ player.username }}
-          </span>
-        </div>
-      </UCard>
-    </li>
+            <span
+              v-for="player in unassigned"
+              :key="player.id"
+              class="px-3 py-1 rounded-full border-2 border-gray-300 text-sm"
+              :class="{ 'font-semibold': player.id === currentId }"
+            >
+              {{ player.username }}
+            </span>
+          </TransitionGroup>
+        </UCard>
+      </li>
+    </Transition>
 
     <li
       v-for="team in teams"
@@ -66,9 +72,11 @@ function membersOf(id: string) {
         </div>
 
         <div class="mt-4">
-          <ul
+          <TransitionGroup
             v-if="membersOf(team.id).length"
-            class="grid grid-cols-2 gap-4"
+            tag="ul"
+            name="player"
+            class="relative grid grid-cols-2 gap-4"
           >
             <li
               v-for="player in membersOf(team.id)"
@@ -87,7 +95,7 @@ function membersOf(id: string) {
                 <p>{{ player.username }}</p>
               </div>
             </li>
-          </ul>
+          </TransitionGroup>
 
           <p
             v-else
@@ -100,3 +108,34 @@ function membersOf(id: string) {
     </li>
   </ul>
 </template>
+
+<style scoped>
+/* Players enter/leave/reorder as they join a team (joinTeam mutates teamId) */
+.player-move,
+.player-enter-active,
+.player-leave-active {
+  transition: all 0.3s ease;
+}
+
+.player-enter-from,
+.player-leave-to {
+  opacity: 0;
+  transform: scale(0.85);
+}
+
+/* take leavers out of flow so remaining players slide into place */
+.player-leave-active {
+  position: absolute;
+}
+
+/* fade the "unassigned" card once everyone is placed */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>
