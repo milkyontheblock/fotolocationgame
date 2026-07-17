@@ -1,21 +1,29 @@
-<script setup lang="ts">
-import { authClient } from '~~/lib/auth-client'
+<script setup>
+import { ref, onMounted } from 'vue'
+import { createClient } from '@supabase/supabase-js'
 
-const { data: session } = await authClient.useSession(useFetch)
+const config = useRuntimeConfig()
+const supabase = createClient(config.public.supabaseUrl, config.public.supabaseKey)
+
+const todos = ref([])
+
+async function getTodos() {
+  const { data } = await supabase.from('todos').select()
+  todos.value = data
+}
+
+onMounted(() => {
+  getTodos()
+})
 </script>
 
 <template>
-  <div v-if="session">
-    <p>Welcome, {{ session.user.name }}</p>
-    <button @click="authClient.signOut()">
-      Sign out
-    </button>
-  </div>
-
-  <button
-    v-else
-    @click="authClient.signIn.social({ provider: 'google' })"
-  >
-    Continue with Google
-  </button>
+  <ul>
+    <li
+      v-for="todo in todos"
+      :key="todo.id"
+    >
+      {{ todo.name }}
+    </li>
+  </ul>
 </template>
