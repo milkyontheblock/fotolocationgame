@@ -14,7 +14,7 @@ const state = reactive<UserForm>({
 
 function onSubmit(event: FormSubmitEvent<UserForm>) {
   player.id.value = event.data.id
-  player.username.value = event.data.username
+  player.username.value = event.data.username ?? ''
 
   open.value = false
 }
