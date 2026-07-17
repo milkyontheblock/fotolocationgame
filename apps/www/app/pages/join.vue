@@ -5,11 +5,15 @@ const value = ref([])
 <template>
   <Container>
     <div class="text-center">
-      <h1 class="text-3xl font-semibold">
+      <h1 class="text-2xl font-bold text-gray-900">
         Join a game
       </h1>
 
-      <div class="mt-4">
+      <p class="mt-2 text-sm text-gray-500">
+        Vul de 4-cijferige gamecode in
+      </p>
+
+      <div class="mt-8 flex justify-center">
         <UPinInput
           v-model="value"
           size="xl"

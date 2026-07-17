@@ -10,12 +10,25 @@ function create() {
 
 <template>
   <Container>
-    <div>
-      <h1>Create new game</h1>
+    <div class="text-center">
+      <h1 class="text-2xl font-bold text-gray-900">
+        Create new game
+      </h1>
 
-      <UButton @click="create">
-        Start hoofdscherm
-      </UButton>
+      <p class="mt-2 text-sm text-gray-500">
+        Open het hoofdscherm en laat spelers joinen
+      </p>
+
+      <div class="mt-8">
+        <UButton
+          size="lg"
+          block
+          class="bg-blue-500 hover:bg-blue-600"
+          @click="create"
+        >
+          Start hoofdscherm
+        </UButton>
+      </div>
     </div>
   </Container>
 </template>

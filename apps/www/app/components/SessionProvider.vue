@@ -17,8 +17,10 @@ export interface SessionContext {
   start: () => void
 }
 
-// presence meta carries the game state so late joiners recover it on first sync
-type PresenceMeta = SessionPlayer & { started?: boolean }
+// presence meta carries the game state so late joiners recover it on first sync.
+// updatedAt: Supabase appends a new meta on every re-track and never drops the
+// stale ones, so we tag each track and pick the freshest meta per key.
+type PresenceMeta = SessionPlayer & { started?: boolean, updatedAt?: number }
 
 export const sessionKey = Symbol('session') as InjectionKey<SessionContext>
 </script>
@@ -44,8 +46,8 @@ let channel: RealtimeChannel | undefined
 function syncPlayers() {
   if (!channel) return
   const metas = Object.values(channel.presenceState<PresenceMeta>())
-    // track() untracks first, so each key holds exactly one meta
-    .map(entries => entries[0])
+    // a key holds every past track(); the freshest one is the current state
+    .map(entries => entries.reduce((a, b) => (b.updatedAt ?? 0) > (a.updatedAt ?? 0) ? b : a))
     .filter((p): p is NonNullable<typeof p> => Boolean(p))
 
   players.value = metas.map(p => ({ id: p.id, username: p.username, teamId: p.teamId }))
@@ -59,15 +61,14 @@ function syncPlayers() {
   }
 }
 
-async function track() {
+function track() {
   if (!channel || !player.id.value || !player.username.value) return
-  // untrack first: re-tracking otherwise appends a new meta and the stale one lingers
-  await channel.untrack()
-  await channel.track({
+  channel.track({
     id: player.id.value,
     username: player.username.value,
     teamId: player.teamId.value || undefined,
-    started: hostStarted || undefined
+    started: hostStarted || undefined,
+    updatedAt: Date.now()
   })
 }
 
