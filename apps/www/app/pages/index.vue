@@ -1,29 +1,19 @@
-<script setup>
-import { ref, onMounted } from 'vue'
-import { createClient } from '@supabase/supabase-js'
-
-const config = useRuntimeConfig()
-const supabase = createClient(config.public.supabaseUrl, config.public.supabaseKey)
-
-const todos = ref([])
-
-async function getTodos() {
-  const { data } = await supabase.from('todos').select()
-  todos.value = data
-}
-
-onMounted(() => {
-  getTodos()
-})
-</script>
-
 <template>
-  <ul>
-    <li
-      v-for="todo in todos"
-      :key="todo.id"
-    >
-      {{ todo.name }}
-    </li>
-  </ul>
+  <Container>
+    <div class="text-center">
+      <h1 class="text-4xl font-bold">
+        Social Deal Geoguessr
+      </h1>
+
+      <div class="mt-4">
+        <UButton href="/create">
+          Create new game
+        </UButton>
+
+        <UButton href="/join">
+          Join game
+        </UButton>
+      </div>
+    </div>
+  </Container>
 </template>
