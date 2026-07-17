@@ -16,6 +16,8 @@ export default defineNuxtConfig({
     '/': { prerender: true }
   },
 
+  compatibilityDate: '2026-06-30',
+
   // nuxt-realtime rides on Nitro's WebSocket support, which is off by default;
   // without this the socket upgrade crashes the dev server (ECONNRESET restart loop)
   nitro: {
@@ -24,14 +26,18 @@ export default defineNuxtConfig({
     }
   },
 
-  compatibilityDate: '2026-06-30',
-
   eslint: {
     config: {
       stylistic: {
         commaDangle: 'never',
         braceStyle: '1tbs'
       }
+    }
+  },
+
+  nuxtRealtime: {
+    storage: {
+      driver: 'memory'
     }
   }
 })
